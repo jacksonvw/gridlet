@@ -1,0 +1,14 @@
+# Gridlet — Python dependencies
+#
+# Install with:
+#   pip install -r requirements.txt
+#
+# On Fedora, python-xlib and pycairo are often available as system packages:
+#   sudo dnf install python3-xlib python3-cairo
+# The others are pip-only:
+#   pip install pystray Pillow
+
+python-xlib>=0.33
+pycairo>=1.20.0
+pystray>=0.19.0
+Pillow>=9.0.0

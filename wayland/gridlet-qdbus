@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Gridlet — qdbus compatibility shim.
+#
+# All the Wayland tooling talks to KWin and kglobalaccel over D-Bus. SteamOS
+# ships `qdbus6`; Fedora 44 ships no qdbus at all (Qt's qdbus lives in the
+# optional qt6-qdbusviewer package, which isn't installed by a Plasma session).
+# `gdbus` comes from glib2 and is therefore present on both.
+#
+# Call it exactly like qdbus6 — and it reproduces qdbus6's output format, so
+# callers that compare a reply against "true" keep working unchanged:
+#
+#     gridlet-qdbus SERVICE OBJECT_PATH INTERFACE.METHOD [args...]
+set -uo pipefail
+
+# Prefer the real thing where it exists (SteamOS), so behaviour there is
+# byte-identical to before this shim was introduced.
+if command -v qdbus6 >/dev/null 2>&1; then
+    exec qdbus6 "$@"
+fi
+
+if [ $# -lt 3 ]; then
+    echo "usage: gridlet-qdbus SERVICE PATH IFACE.METHOD [args...]" >&2
+    exit 2
+fi
+service=$1; path=$2; member=$3
+shift 3
+
+# gdbus takes the dotted interface.method as one --method argument — the same
+# string qdbus6 takes as its third positional. Bare word arguments are coerced
+# to strings using the signature gdbus reads from introspection.
+#
+# gdbus replies are GVariant tuples: "()" for void, "(false,)" for a bool,
+# "('text',)" for a string. Unwrap them back to qdbus6's bare form.
+gdbus call --session --dest "$service" --object-path "$path" \
+           --method "$member" "$@" \
+    | sed -e 's/^(//' -e 's/,)$//' -e 's/^)$//' -e "s/^'//" -e "s/'\$//"

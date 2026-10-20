@@ -1,0 +1,38 @@
+# Gridlet — read access to keyboard event devices.
+#
+# Wayland forbids applications from reading global keyboard state, so Gridlet's
+# hotkey helper reads the keyboard's evdev node directly to know when Ctrl+Meta
+# is held. On Fedora, /dev/input/event* is root:input 0660 and a desktop user is
+# not in the `input` group, so the helper can open nothing and silently does
+# nothing.
+#
+# This grants access the narrow way: `uaccess` makes systemd-logind attach an
+# ACL for whoever is the ACTIVE user on the seat, and drop it again on logout or
+# user switch. Scoped to ID_INPUT_KEYBOARD devices only — mice, tablets, game
+# controllers and everything else stay untouched.
+#
+# Tradeoff, stated plainly: while you are logged in, any process running as you
+# can read every keystroke from these keyboards. That is inherent to reading
+# evdev at all, and it is strictly narrower than `usermod -aG input`, which
+# would cover every input device permanently, for every session.
+#
+# THE FILENAME NUMBER MATTERS. It must sort after 60-input-id.rules, which sets
+# ID_INPUT_KEYBOARD, and before 73-seat-late.rules, whose single line
+#
+#     TAG=="uaccess", ENV{MAJOR}!="", RUN{builtin}+="uaccess"
+#
+# is what actually turns the tag into an ACL. Tag the device any later (a 99-
+# prefix, say) and the tag still shows up in `udevadm info` — but the builtin
+# already ran and saw nothing, so no ACL is ever created and the failure looks
+# like the rule simply didn't match. Hence 70.
+#
+# Install:
+#   sudo cp wayland/70-gridlet-input.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload
+#   sudo udevadm trigger --subsystem-match=input --action=add
+# Verify (expect 1 or more; if 0, reboot — the trigger alone isn't always enough):
+#   getfacl -p /dev/input/event* | grep -c "user:$USER:rw"
+# Remove:
+#   sudo rm /etc/udev/rules.d/70-gridlet-input.rules && sudo udevadm control --reload
+
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_KEYBOARD}=="1", TAG+="uaccess"

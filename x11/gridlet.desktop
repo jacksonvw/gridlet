@@ -1,0 +1,10 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Name=Gridlet
+Comment=FancyZones-style window snapping for KDE Plasma X11
+Exec=python3 /path/to/gridlet/main.py
+Icon=preferences-system-windows-move
+Type=Application
+Categories=Utility;
+StartupNotify=false
+X-KDE-StartupNotify=false
