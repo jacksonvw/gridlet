@@ -194,5 +194,5 @@ between the grid and the screen edge (both in pixels).
   type also governs stacking and input, so it interacts with constraint #2.
 - **Multi-monitor** picks the screen under the cursor (`activeOutput()`).
   Verified on Fedora 44 / Plasma 6.7.3 with two monitors of different
-  resolutions (3840×2160 and 1920×1080, both at scale 1) — snapping is correct
-  on both. Mixed *scale factors* remain untested.
+  resolutions, both at scale 1 — snapping is correct on both. Mixed *scale
+  factors* remain untested.
