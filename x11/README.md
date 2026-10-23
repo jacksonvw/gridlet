@@ -110,6 +110,13 @@ Alternatively, copy the desktop file manually:
 cp gridlet.desktop ~/.config/autostart/gridlet.desktop
 ```
 
+The desktop file's `Icon=gridlet` needs the icon in your icon theme. Copy it
+there once:
+
+```bash
+mkdir -p ~/.local/share/icons && cp -r ../icons/hicolor ~/.local/share/icons/
+```
+
 ---
 
 ## Troubleshooting
@@ -143,3 +150,4 @@ pip install pystray Pillow
 | `editor.py` | Grid Editor GUI (tkinter) |
 | `requirements.txt` | Python package dependencies |
 | `gridlet.desktop` | KDE desktop entry for autostart/app launcher |
+| `../icons/` | The app icon, shared with the Wayland version |
