@@ -44,22 +44,24 @@ def draw_preview(canvas, cols, rows, gap, margin):
     # Background
     canvas.create_rectangle(0, 0, PREVIEW_W, PREVIEW_H, fill="#1c1c2d", outline="")
 
-    # Scale proportionally so it looks right at preview size. The real grid is
-    # ~3840px wide, the preview is 400px, so *8 keeps small values visible.
-    # gap and margin share one scale factor, so their relative sizes stay honest
-    # — which is the whole point of being able to tune them against each other.
-    scale = (PREVIEW_W / 3840) * 8
-    g = gap * scale
-    m = margin * scale
+    # Shrink gap and margin by the same factors that shrink the screen to the
+    # preview, so they show at their true proportions. Each axis has its own
+    # factor, since the screen need not be 16:9 like the preview. gap and margin
+    # share each factor, so their relative sizes stay honest — which is the
+    # whole point of being able to tune them against each other.
+    sx = PREVIEW_W / canvas.winfo_screenwidth()
+    sy = PREVIEW_H / canvas.winfo_screenheight()
+    gx, gy = gap * sx, gap * sy
+    mx, my = margin * sx, margin * sy
 
     # Same share-out as the overlay: margins and inter-cell gaps come off first.
-    cell_w = max(2, (PREVIEW_W - 2 * m - (cols - 1) * g) / cols)
-    cell_h = max(2, (PREVIEW_H - 2 * m - (rows - 1) * g) / rows)
+    cell_w = max(2, (PREVIEW_W - 2 * mx - (cols - 1) * gx) / cols)
+    cell_h = max(2, (PREVIEW_H - 2 * my - (rows - 1) * gy) / rows)
 
     for row in range(rows):
         for col in range(cols):
-            x0 = m + col * (cell_w + g)
-            y0 = m + row * (cell_h + g)
+            x0 = mx + col * (cell_w + gx)
+            y0 = my + row * (cell_h + gy)
             canvas.create_rectangle(x0, y0, x0 + cell_w, y0 + cell_h,
                                     fill="#2a2a4a", outline="#9090cc", width=1)
 

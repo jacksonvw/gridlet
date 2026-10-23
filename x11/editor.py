@@ -45,17 +45,18 @@ def draw_preview(canvas, cols, rows, gap):
     cell_w = PREVIEW_W / cols
     cell_h = PREVIEW_H / rows
 
-    # Scale the gap proportionally so it looks right at preview size.
-    # The real grid is ~3840px wide; the preview is 400px.
-    scale = PREVIEW_W / 3840
-    scaled_gap = max(1, gap * scale * 8)  # *8 so gap is visible at small sizes
+    # Shrink the gap by the same factors that shrink the screen to the preview,
+    # so it shows at its true proportion. Each axis has its own factor, since
+    # the screen need not be 16:9 like the preview.
+    gap_x = gap * PREVIEW_W / canvas.winfo_screenwidth()
+    gap_y = gap * PREVIEW_H / canvas.winfo_screenheight()
 
     for row in range(rows):
         for col in range(cols):
-            x0 = col * cell_w + scaled_gap
-            y0 = row * cell_h + scaled_gap
-            x1 = (col + 1) * cell_w - scaled_gap
-            y1 = (row + 1) * cell_h - scaled_gap
+            x0 = col * cell_w + gap_x
+            y0 = row * cell_h + gap_y
+            x1 = (col + 1) * cell_w - gap_x
+            y1 = (row + 1) * cell_h - gap_y
             canvas.create_rectangle(x0, y0, x1, y1,
                                     fill="#2a2a4a", outline="#9090cc", width=1)
 
