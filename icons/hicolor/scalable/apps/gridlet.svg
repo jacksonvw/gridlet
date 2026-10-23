@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Gridlet: a two-by-two grid with a square painted into its top-left cell,
+     the zone a window snaps into. The frame and the cross are 2 units wide,
+     the square sits 1 unit inside its cell, and every edge falls on a whole
+     unit, so the icon stays sharp at 16 px and at each multiple of 16. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+  <path fill="#FFFFFF" fill-rule="evenodd" d="M 1 1 H 15 V 15 H 1 Z M 3 3 V 7 H 7 V 3 Z M 9 3 V 7 H 13 V 3 Z M 3 9 V 13 H 7 V 9 Z M 9 9 V 13 H 13 V 9 Z M 4 4 H 6 V 6 H 4 Z"/>
+</svg>
