@@ -34,8 +34,8 @@ SNI_IFACE = "org.kde.StatusNotifierItem"
 MENU_IFACE = "com.canonical.dbusmenu"
 PROPS_IFACE = "org.freedesktop.DBus.Properties"
 
-ICON_ON = "preferences-system-windows"   # themed icons that exist on Plasma
-ICON_OFF = "window-close-symbolic"
+ICON_ON = "gridlet"                  # Gridlet's own icon, installed into the theme
+ICON_OFF = "window-close-symbolic"   # a stock Plasma icon
 
 
 # ---------------------------------------------------------------------------
