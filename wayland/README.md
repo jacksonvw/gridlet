@@ -5,7 +5,8 @@ and **Fedora 44** (Plasma 6.7.3). It matches the X11 original
 ([`../x11/`](../x11/)) exactly:
 hold **Ctrl+Meta while dragging a window**, a grid overlay appears, paint a zone
 across cells, release to snap. This folder is self-contained (it ships its own
-copies of `config.py` and `editor.py`).
+copies of `config.py` and `editor.py`), apart from the app icon, which both
+versions share from [`../icons/`](../icons/).
 
 > Why a rewrite, not a port of `overlay.py`? X11 lets any app read the global
 > keyboard state and move other apps' windows. Wayland forbids both by design.
@@ -82,7 +83,8 @@ bash wayland/uninstall.sh    # remove everything (files, autostart, menu, shortc
 Installs to: `~/.local/share/kwin/scripts/gridlet` (script), `~/.local/share/gridlet`
 (helper/tray/editor tooling), `~/.config/autostart/gridlet-{helper,tray}.desktop`
 (autostart), `~/.local/share/applications/gridlet{,-editor}.desktop` (app menu),
-plus `kwinrc` `Plugins/gridletEnabled=true`. It reads grid settings from
+`~/.local/share/icons/hicolor/*/apps/gridlet.{svg,png}` (icon), plus `kwinrc`
+`Plugins/gridletEnabled=true`. It reads grid settings from
 `~/.config/gridlet/config.json`. `uninstall.sh` removes all of the above and
 unregisters the `GridletActivate`/`GridletDeactivate` shortcuts.
 
@@ -173,6 +175,7 @@ between the grid and the screen edge (both in pixels).
 | `install.sh` / `uninstall.sh` | Install/enable/autostart, or remove |
 | `gridlet-dev-run.sh` | Dev runner with live logs |
 | `editor.py`, `config.py` | The X11 editor + config, reused (self-contained copies) |
+| `../icons/hicolor/` | App icon: the source SVG and its PNG sizes (`../icons/render-pngs.sh` re-renders them) |
 
 ---
 

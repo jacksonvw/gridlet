@@ -25,5 +25,9 @@ rm -f  "$HOME/.config/autostart/gridlet-tray.desktop"
 rm -f  "$HOME/.local/share/applications/gridlet-editor.desktop"
 rm -f  "$HOME/.local/share/applications/gridlet.desktop"
 rm -rf "$HOME/.local/share/gridlet"
+rm -f  "$HOME"/.local/share/icons/hicolor/*/apps/gridlet.png \
+       "$HOME/.local/share/icons/hicolor/scalable/apps/gridlet.svg"
+command -v gtk-update-icon-cache >/dev/null 2>&1 \
+    && gtk-update-icon-cache -q -t -f "$HOME/.local/share/icons/hicolor" || true
 
 echo "✓ Gridlet removed. Log out/in once to fully clear it from KWin's memory."

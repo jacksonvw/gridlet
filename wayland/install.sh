@@ -6,6 +6,7 @@
 #   • helper, tray, editor tooling → ~/.local/share/gridlet
 #   • autostart entries (helper + tray)   → ~/.config/autostart
 #   • app-menu entries (Gridlet + Editor) → ~/.local/share/applications
+#   • icon (SVG + PNG sizes)              → ~/.local/share/icons/hicolor
 #
 # Enables and starts everything now, so you don't have to reboot to try it.
 # Re-run any time to update. Run uninstall.sh to remove it all cleanly.
@@ -38,6 +39,16 @@ chmod +x "$LIB_DST/gridlet-hotkey-helper.py" "$LIB_DST/gridlet-apply.sh" \
          "$LIB_DST/gridlet-edit.sh" "$LIB_DST/gridlet-start.sh" \
          "$LIB_DST/gridlet-qdbus"
 
+# The desktop entries and the tray name the icon, so it has to be in the icon
+# theme; the editor also loads its window icon from these PNGs.
+ICONS="$HOME/.local/share/icons"
+echo "→ Installing the icon to $ICONS/hicolor"
+mkdir -p "$ICONS"
+cp -r "$HERE/../icons/hicolor" "$ICONS/"
+# Plasma trusts the theme's icon cache when there is one, so refresh it.
+command -v gtk-update-icon-cache >/dev/null 2>&1 \
+    && gtk-update-icon-cache -q -t -f "$ICONS/hicolor" || true
+
 echo "→ Enabling the KWin script"
 kwriteconfig6 --file kwinrc --group Plugins --key gridletEnabled true
 "$HERE/gridlet-qdbus" org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
@@ -50,6 +61,7 @@ Type=Application
 Name=Gridlet Hotkey Helper
 Comment=Watches Ctrl+Meta so the Gridlet KWin script can raise the grid
 Exec=python3 $LIB_DST/gridlet-hotkey-helper.py
+Icon=gridlet
 Terminal=false
 NoDisplay=true
 X-KDE-autostart-phase=2
@@ -60,6 +72,7 @@ Type=Application
 Name=Gridlet Tray
 Comment=Gridlet system-tray control (enable / disable / quit)
 Exec=python3 $LIB_DST/gridlet-tray.py
+Icon=gridlet
 Terminal=false
 NoDisplay=true
 X-KDE-autostart-phase=2
@@ -75,18 +88,21 @@ Name=Gridlet
 GenericName=Window Snapping
 Comment=FancyZones-style window snapping — hold Ctrl+Meta while dragging
 Exec=$LIB_DST/gridlet-start.sh
-Icon=preferences-system-windows
+Icon=gridlet
 Terminal=false
 Categories=Utility;
 Keywords=snap;tile;zones;window;grid;fancyzones;
 EOF
+# StartupWMClass matches the editor window's WM_CLASS, so the taskbar shows it
+# as this entry, with this icon.
 cat > "$APPS/gridlet-editor.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Gridlet Grid Editor
 Comment=Edit the Gridlet snapping grid (rows, columns, gap)
 Exec=$LIB_DST/gridlet-edit.sh
-Icon=preferences-system-windows
+Icon=gridlet
+StartupWMClass=gridlet
 Terminal=false
 Categories=Utility;Settings;
 EOF
