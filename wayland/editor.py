@@ -16,6 +16,7 @@ Returns True (saved) or False (cancelled) when called as open_editor().
 """
 
 import json
+import os
 import subprocess
 import tkinter as tk
 from tkinter import ttk
@@ -25,6 +26,22 @@ import config as cfg
 # Preview canvas size (the box that shows the zone layout)
 PREVIEW_W = 400
 PREVIEW_H = 225   # 16:9 — matches a typical widescreen monitor
+
+ICON_SIZES = (16, 32, 48, 64, 128, 256)
+
+
+def load_icons():
+    """
+    The Gridlet icon at every size it ships in, as Tk images.
+
+    The PNGs sit in an hicolor tree next to this file's folder: icons/ in the
+    repo, and ~/.local/share/icons once installed (this file then lives in
+    ~/.local/share/gridlet). Tk 8.6 can't read the SVG, hence the PNGs.
+    """
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "..", "icons", "hicolor")
+    paths = [os.path.join(base, f"{n}x{n}", "apps", "gridlet.png") for n in ICON_SIZES]
+    return [tk.PhotoImage(file=p) for p in paths if os.path.exists(p)]
 
 
 def primary_monitor_size(root):
@@ -103,9 +120,13 @@ def open_editor():
 
     result = {"saved": False}
 
-    root = tk.Tk()
+    # className sets WM_CLASS, which the desktop entry's StartupWMClass matches
+    root = tk.Tk(className="gridlet")
     root.title("Gridlet — Grid Editor")
     root.resizable(False, False)
+    icons = load_icons()
+    if icons:
+        root.iconphoto(True, *icons)
     screen = primary_monitor_size(root)
 
     # ── Controls ──────────────────────────────────────────────────────────────
