@@ -16,6 +16,7 @@ Returns True (saved) or False (cancelled) when called as open_editor().
 
 import tkinter as tk
 from tkinter import ttk
+import Xlib.display
 import config as cfg
 
 
@@ -24,7 +25,26 @@ PREVIEW_W = 400
 PREVIEW_H = 225   # 16:9 — matches a typical widescreen monitor
 
 
-def draw_preview(canvas, cols, rows, gap):
+def primary_monitor_size(root):
+    """
+    (width, height) of the primary monitor.
+
+    Tk only knows the combined desktop, which spans every monitor, so ask
+    XRandR the way overlay.py does. Falls back to Tk's screen size.
+    """
+    try:
+        display = Xlib.display.Display()
+        try:
+            monitors = display.screen().root.xrandr_get_monitors(is_active=True).monitors
+        finally:
+            display.close()
+        mon = next((m for m in monitors if m.primary), monitors[0])
+        return mon.width_in_pixels, mon.height_in_pixels
+    except Exception:
+        return root.winfo_screenwidth(), root.winfo_screenheight()
+
+
+def draw_preview(canvas, cols, rows, gap, screen):
     """
     Redraw the zone preview on the canvas.
 
@@ -36,6 +56,7 @@ def draw_preview(canvas, cols, rows, gap):
         cols: number of columns
         rows: number of rows
         gap: gap in pixels (scaled to canvas size)
+        screen: (width, height) of the monitor the preview stands for
     """
     canvas.delete("all")
 
@@ -48,8 +69,8 @@ def draw_preview(canvas, cols, rows, gap):
     # Shrink the gap by the same factors that shrink the screen to the preview,
     # so it shows at its true proportion. Each axis has its own factor, since
     # the screen need not be 16:9 like the preview.
-    gap_x = gap * PREVIEW_W / canvas.winfo_screenwidth()
-    gap_y = gap * PREVIEW_H / canvas.winfo_screenheight()
+    gap_x = gap * PREVIEW_W / screen[0]
+    gap_y = gap * PREVIEW_H / screen[1]
 
     for row in range(rows):
         for col in range(cols):
@@ -76,6 +97,7 @@ def open_editor():
     root = tk.Tk()
     root.title("Gridlet — Grid Editor")
     root.resizable(False, False)
+    screen = primary_monitor_size(root)
 
     # ── Controls ──────────────────────────────────────────────────────────────
 
@@ -92,7 +114,7 @@ def open_editor():
             c = max(1, min(16, cols_var.get()))
             r = max(1, min(12, rows_var.get()))
             g = max(0, min(32, gap_var.get()))
-            draw_preview(canvas, c, r, g)
+            draw_preview(canvas, c, r, g, screen)
         except tk.TclError:
             pass  # Spinbox mid-edit — ignore invalid transient state
 
@@ -119,7 +141,7 @@ def open_editor():
                        highlightbackground="#444466")
     canvas.pack()
 
-    draw_preview(canvas, cols_var.get(), rows_var.get(), gap_var.get())
+    draw_preview(canvas, cols_var.get(), rows_var.get(), gap_var.get(), screen)
 
     # ── Buttons ───────────────────────────────────────────────────────────────
 

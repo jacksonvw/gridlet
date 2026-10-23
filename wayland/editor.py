@@ -15,6 +15,8 @@ Saves changes to ~/.config/gridlet/config.json.
 Returns True (saved) or False (cancelled) when called as open_editor().
 """
 
+import json
+import subprocess
 import tkinter as tk
 from tkinter import ttk
 import config as cfg
@@ -25,7 +27,29 @@ PREVIEW_W = 400
 PREVIEW_H = 225   # 16:9 — matches a typical widescreen monitor
 
 
-def draw_preview(canvas, cols, rows, gap, margin):
+def primary_monitor_size(root):
+    """
+    (width, height) of the primary monitor, in the logical pixels the KWin
+    script lays the grid out in.
+
+    Tk only knows the combined desktop, which spans every monitor, so ask
+    KScreen instead. Falls back to Tk's screen size if that fails.
+    """
+    try:
+        out = subprocess.run(["kscreen-doctor", "-j"], capture_output=True,
+                             text=True, timeout=3).stdout
+        outputs = [o for o in json.loads(out)["outputs"] if o.get("enabled")]
+        o = min(outputs, key=lambda o: o.get("priority") or 99)  # 1 = primary
+        w, h = o["size"]["width"], o["size"]["height"]
+        if o.get("rotation") in (2, 8):     # turned 90° either way
+            w, h = h, w
+        scale = o.get("scale") or 1
+        return round(w / scale), round(h / scale)
+    except Exception:
+        return root.winfo_screenwidth(), root.winfo_screenheight()
+
+
+def draw_preview(canvas, cols, rows, gap, margin, screen):
     """
     Redraw the zone preview on the canvas.
 
@@ -38,6 +62,7 @@ def draw_preview(canvas, cols, rows, gap, margin):
         rows: number of rows
         gap: pixels between adjacent zones (scaled to canvas size)
         margin: pixels between the grid and the screen edge (likewise)
+        screen: (width, height) of the monitor the preview stands for
     """
     canvas.delete("all")
 
@@ -49,8 +74,8 @@ def draw_preview(canvas, cols, rows, gap, margin):
     # factor, since the screen need not be 16:9 like the preview. gap and margin
     # share each factor, so their relative sizes stay honest — which is the
     # whole point of being able to tune them against each other.
-    sx = PREVIEW_W / canvas.winfo_screenwidth()
-    sy = PREVIEW_H / canvas.winfo_screenheight()
+    sx = PREVIEW_W / screen[0]
+    sy = PREVIEW_H / screen[1]
     gx, gy = gap * sx, gap * sy
     mx, my = margin * sx, margin * sy
 
@@ -81,6 +106,7 @@ def open_editor():
     root = tk.Tk()
     root.title("Gridlet — Grid Editor")
     root.resizable(False, False)
+    screen = primary_monitor_size(root)
 
     # ── Controls ──────────────────────────────────────────────────────────────
 
@@ -99,7 +125,7 @@ def open_editor():
             r = max(1, min(12, rows_var.get()))
             g = max(0, min(32, gap_var.get()))
             m = max(0, min(64, margin_var.get()))
-            draw_preview(canvas, c, r, g, m)
+            draw_preview(canvas, c, r, g, m, screen)
         except tk.TclError:
             pass  # Spinbox mid-edit — ignore invalid transient state
 
@@ -132,7 +158,7 @@ def open_editor():
     canvas.pack()
 
     draw_preview(canvas, cols_var.get(), rows_var.get(),
-                 gap_var.get(), margin_var.get())
+                 gap_var.get(), margin_var.get(), screen)
 
     # ── Buttons ───────────────────────────────────────────────────────────────
 
