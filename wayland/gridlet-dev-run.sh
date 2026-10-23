@@ -3,7 +3,8 @@
 #
 # Loads the KWin overlay/snap script and starts the Ctrl+Meta keyboard helper,
 # streaming live logs from BOTH so you can watch it work and see any errors.
-# Press Ctrl+C to stop and clean everything up.
+# While it runs it stands in for an installed Gridlet (both use the script id
+# "gridlet"). Press Ctrl+C to stop, clean up and hand back to the installed one.
 #
 # Run from anywhere:   bash wayland/gridlet-dev-run.sh
 set -u
@@ -24,9 +25,17 @@ cleanup() {
   "$HERE/gridlet-qdbus" org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "$SCRIPT_ID" >/dev/null 2>&1
   [ -n "$JPID" ] && kill "$JPID" 2>/dev/null
   rm -rf "$QML_DIR"
-  echo "[gridlet] stopped and unloaded."
+  # Loading this copy unloaded any installed Gridlet (same script id).
+  # Reconfiguring makes KWin load enabled scripts again, which brings it back.
+  "$HERE/gridlet-qdbus" org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1
+  if [ "$(kreadconfig6 --file kwinrc --group Plugins --key gridletEnabled 2>/dev/null)" = "true" ]; then
+    echo "[gridlet] stopped; the installed Gridlet is loaded again."
+  else
+    echo "[gridlet] stopped and unloaded."
+  fi
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap exit INT TERM      # Ctrl+C exits, and the EXIT trap cleans up once
 
 command -v qdbus6 >/dev/null 2>&1 || command -v gdbus >/dev/null 2>&1 \
   || { echo "neither qdbus6 nor gdbus found — is this a KDE session?"; exit 1; }
