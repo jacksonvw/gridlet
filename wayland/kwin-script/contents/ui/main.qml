@@ -64,8 +64,9 @@ Window {
 
     // ---- session geometry (locked when the overlay appears) ----
     property rect workArea: Qt.rect(0, 0, 0, 0)
-    property int cellW: 0
-    property int cellH: 0
+    // Cell edges inside the work area: column c spans colStart[c]..colEnd[c].
+    // Replaced as one object, so the cells never see a half-updated layout.
+    property var layout: ({ "colStart": [], "colEnd": [], "rowStart": [], "rowEnd": [] })
     property int startCol: -1
     property int startRow: -1
 
@@ -103,17 +104,19 @@ Window {
             height: overlay.workArea.height
 
             Repeater {
-                model: overlay.rows * overlay.cols
+                model: overlay.layout.colStart.length * overlay.layout.rowStart.length
                 Rectangle {
-                    property int c: index % overlay.cols
-                    property int r: Math.floor(index / overlay.cols)
+                    property int c: index % overlay.layout.colStart.length
+                    property int r: Math.floor(index / overlay.layout.colStart.length)
                     property bool sel: overlay.selMinCol >= 0 &&
                                        c >= overlay.selMinCol && c <= overlay.selMaxCol &&
                                        r >= overlay.selMinRow && r <= overlay.selMaxRow
-                    x: overlay.margin + c * (overlay.cellW + overlay.gap)
-                    y: overlay.margin + r * (overlay.cellH + overlay.gap)
-                    width: overlay.cellW
-                    height: overlay.cellH
+                    // "|| 0": a cell can briefly be out of range while the
+                    // Repeater rebuilds for a grid of a different size.
+                    x: overlay.layout.colStart[c] || 0
+                    y: overlay.layout.rowStart[r] || 0
+                    width: (overlay.layout.colEnd[c] - overlay.layout.colStart[c]) || 0
+                    height: (overlay.layout.rowEnd[r] - overlay.layout.rowStart[r]) || 0
                     // Matches the X11 original: 30% white lines / 30% white fill.
                     color: sel ? "#4DFFFFFF" : "transparent"
                     border.color: "#4DFFFFFF"
@@ -164,29 +167,60 @@ Window {
         return ws.activeScreen;
     }
 
-    // Hit test. Each cell owns its trailing gap, and the outer margins clamp to
-    // the first/last cell — so there are no dead zones: dragging over a gap or
-    // into the margin still selects the neighbouring cell rather than nothing.
+    // Lay out cells along one axis of `length` pixels: the margin at both ends,
+    // `gap` between neighbours, and the rest shared out by `weights`. Every
+    // edge is rounded on its own, so leftover pixels spread across the cells
+    // and both margins come out exactly as configured.
+    function axis(length, weights) {
+        var n = weights.length, total = 0, acc = 0;
+        for (var i = 0; i < n; i++) total += weights[i];
+        // At least 1px per cell, even if margins and gaps eat everything.
+        var avail = Math.max(n, length - 2 * margin - (n - 1) * gap);
+        var starts = [], ends = [];
+        for (var j = 0; j < n; j++) {
+            var a = Math.round(avail * acc / total);
+            acc += weights[j];
+            var b = Math.round(avail * acc / total);
+            starts.push(margin + j * gap + a);
+            ends.push(margin + j * gap + Math.max(a + 1, b));
+        }
+        return { "starts": starts, "ends": ends };
+    }
+
+    function equalWeights(n) {
+        var w = [];
+        for (var i = 0; i < n; i++) w.push(1);
+        return w;
+    }
+
+    // Which cell along an axis holds `pos`: each cell owns the gap after it,
+    // and the margins clamp to the first and last cells.
+    function indexAt(pos, starts) {
+        var i = 0;
+        while (i + 1 < starts.length && pos >= starts[i + 1]) i++;
+        return i;
+    }
+
+    // Hit test. There are no dead zones: dragging over a gap or into the
+    // margin still selects the neighbouring cell rather than nothing.
     function cellAt(px, py) {
         var lx = px - workArea.x;
         var ly = py - workArea.y;
         if (lx < 0 || ly < 0 || lx >= workArea.width || ly >= workArea.height)
             return null;
-        var col = Math.floor((lx - margin) / (cellW + gap));
-        var row = Math.floor((ly - margin) / (cellH + gap));
-        return { "col": Math.max(0, Math.min(col, cols - 1)),
-                 "row": Math.max(0, Math.min(row, rows - 1)) };
+        return { "col": indexAt(lx, layout.colStart), "row": indexAt(ly, layout.rowStart) };
     }
 
     function computeZone(c1, r1, c2, r2) {
         var minC = Math.min(c1, c2), maxC = Math.max(c1, c2);
         var minR = Math.min(r1, r2), maxR = Math.max(r1, r2);
         // A multi-cell zone absorbs the gaps between the cells it spans.
+        var l = layout;
         return {
-            "x": workArea.x + margin + minC * (cellW + gap),
-            "y": workArea.y + margin + minR * (cellH + gap),
-            "w": (maxC - minC + 1) * cellW + (maxC - minC) * gap,
-            "h": (maxR - minR + 1) * cellH + (maxR - minR) * gap
+            "x": workArea.x + l.colStart[minC],
+            "y": workArea.y + l.rowStart[minR],
+            "w": l.colEnd[maxC] - l.colStart[minC],
+            "h": l.rowEnd[maxR] - l.rowStart[minR]
         };
     }
 
@@ -200,10 +234,11 @@ Window {
         overlay.x = g.x; overlay.y = g.y;
         overlay.width = g.width; overlay.height = g.height;
         // Cells share out what's left after the outer margins and the inter-cell
-        // gaps are taken off. Floor of 1px so a silly margin/gap can't produce a
-        // zero or negative cell size.
-        cellW = Math.max(1, Math.floor((workArea.width  - 2 * margin - (cols - 1) * gap) / cols));
-        cellH = Math.max(1, Math.floor((workArea.height - 2 * margin - (rows - 1) * gap) / rows));
+        // gaps are taken off.
+        var cx = axis(workArea.width, equalWeights(cols));
+        var cy = axis(workArea.height, equalWeights(rows));
+        layout = { "colStart": cx.starts, "colEnd": cx.ends,
+                   "rowStart": cy.starts, "rowEnd": cy.ends };
 
         startCol = -1; startRow = -1;
         selMinCol = -1;
@@ -219,7 +254,8 @@ Window {
         updateHighlight();
         fadeIn.restart();
         console.warn("Gridlet: ▶ overlay shown  screen=" + g.width + "x" + g.height +
-              "  work=" + workArea.width + "x" + workArea.height + "  cell=" + cellW + "x" + cellH +
+              "  work=" + workArea.width + "x" + workArea.height + "  cell=" +
+              (cx.ends[0] - cx.starts[0]) + "x" + (cy.ends[0] - cy.starts[0]) +
               "  gap=" + gap + " margin=" + margin);
     }
 
