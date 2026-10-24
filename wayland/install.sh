@@ -49,9 +49,13 @@ cp -r "$HERE/../icons/hicolor" "$ICONS/"
 command -v gtk-update-icon-cache >/dev/null 2>&1 \
     && gtk-update-icon-cache -q -t -f "$ICONS/hicolor" || true
 
-echo "→ Enabling the KWin script"
+echo "→ Enabling the KWin script and loading it now"
 kwriteconfig6 --file kwinrc --group Plugins --key gridletEnabled true
-"$HERE/gridlet-qdbus" org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
+# Load it through gridlet-apply.sh, which uses a fresh path. KWin caches
+# compiled QML by path and a reconfigure skips a script that is already
+# loaded, so a re-install would otherwise keep running the old engine until
+# the next login. gridlet-apply.sh also (re)starts the helper.
+bash "$LIB_DST/gridlet-apply.sh" >/dev/null
 
 echo "→ Installing autostart entries (helper + tray)"
 mkdir -p "$AUTOSTART"
@@ -107,13 +111,11 @@ Terminal=false
 Categories=Utility;Settings;
 EOF
 
-echo "→ Starting the helper + tray now"
-# Anchored on the interpreter, so an editor with these files open survives.
-pkill -f '^[^ ]*python3 [^ ]*gridlet-hotkey-helper[.]py' 2>/dev/null || true
-pkill -f '^[^ ]*python3 [^ ]*gridlet-tray[.]py'          2>/dev/null || true
+echo "→ Starting the tray now"
+# Anchored on the interpreter, so an editor with the file open survives.
+pkill -f '^[^ ]*python3 [^ ]*gridlet-tray[.]py' 2>/dev/null || true
 sleep 0.3
-setsid python3 "$LIB_DST/gridlet-hotkey-helper.py" >/dev/null 2>&1 </dev/null &
-setsid python3 "$LIB_DST/gridlet-tray.py"          >/dev/null 2>&1 </dev/null &
+setsid python3 "$LIB_DST/gridlet-tray.py" >/dev/null 2>&1 </dev/null &
 
 echo
 echo "✓ Gridlet installed and running. Hold Ctrl+Meta while dragging a window."
