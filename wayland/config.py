@@ -17,6 +17,9 @@ Example config.json:
             "gap": 8,
             "margin": 4
         },
+        "monitors": {
+            "DP-1": {"rows": 2, "cols": 3, "gap": 8, "margin": 4}
+        },
         "hotkey": {
             "ctrl": true,
             "shift": false,
@@ -24,6 +27,9 @@ Example config.json:
             "meta": true
         }
     }
+
+"grid" is the default. A monitor named under "monitors" (by its connector
+name, as kscreen-doctor and KWin call it) uses its own grid instead.
 
 Spacing is two independent settings:
   - "gap"    — pixels between one zone and the next
@@ -53,6 +59,7 @@ DEFAULTS = {
         "gap": 8,          # pixels between one zone and the next
         "margin": 4        # pixels between the grid and the screen edge
     },
+    "monitors": {},        # connector name → that monitor's own grid
     "hotkey": {
         "ctrl": True,      # Ctrl key must be held
         "shift": False,    # Shift NOT required (KDE Plasma intercepts Shift+drag)

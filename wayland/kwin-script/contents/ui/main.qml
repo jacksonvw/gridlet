@@ -41,15 +41,22 @@ Window {
     visible: false
 
     // ---- config (from config.js, generated from ~/.config/gridlet/config.json) ----
-    property int rows: GCfg.rows
-    property int cols: GCfg.cols
+    // The default grid, and each monitor's own grid by connector name (e.g.
+    // "DP-1"). Monitors without their own use the default.
+    readonly property var defaultGrid: GCfg.grid
+    readonly property var monitorGrids: GCfg.monitors
+
+    // The grid in use, set from the monitor under the cursor when the overlay
+    // appears.
+    property int rows: defaultGrid.rows
+    property int cols: defaultGrid.cols
     // gap    = space BETWEEN adjacent zones
     // margin = space between the grid and the work-area edge
     // These are independent: the old single `gap` was inset on every side of
     // every cell, which forced edge spacing to be exactly half the spacing
     // between cells. Now each is set on its own.
-    property int gap: GCfg.gap
-    property int margin: GCfg.margin
+    property int gap: defaultGrid.gap
+    property int margin: defaultGrid.margin
 
     readonly property var ws: KWin.Workspace
 
@@ -233,6 +240,9 @@ Window {
         var g = out.geometry;
         overlay.x = g.x; overlay.y = g.y;
         overlay.width = g.width; overlay.height = g.height;
+        var grid = monitorGrids[out.name] || defaultGrid;
+        rows = grid.rows; cols = grid.cols;
+        gap = grid.gap; margin = grid.margin;
         // Cells share out what's left after the outer margins and the inter-cell
         // gaps are taken off.
         var cx = axis(workArea.width, equalWeights(cols));
@@ -253,10 +263,12 @@ Window {
         overlayShown = true;
         updateHighlight();
         fadeIn.restart();
-        console.warn("Gridlet: ▶ overlay shown  screen=" + g.width + "x" + g.height +
+        console.warn("Gridlet: ▶ overlay shown  " + out.name +
+              (monitorGrids[out.name] ? " (own grid)" : " (default grid)") +
+              "  screen=" + g.width + "x" + g.height +
               "  work=" + workArea.width + "x" + workArea.height + "  cell=" +
               (cx.ends[0] - cx.starts[0]) + "x" + (cy.ends[0] - cy.starts[0]) +
-              "  gap=" + gap + " margin=" + margin);
+              "  grid=" + cols + "x" + rows + "  gap=" + gap + " margin=" + margin);
     }
 
     function hideOverlay() {
@@ -345,5 +357,7 @@ Window {
     }
 
     Component.onCompleted: console.warn("Gridlet: engine loaded (" + cols + "x" + rows +
-        ", gap " + gap + ", margin " + margin + ") — root-Window, poll-based");
+        ", gap " + gap + ", margin " + margin +
+        (Object.keys(monitorGrids).length ? "; own grids: " + Object.keys(monitorGrids).join(", ") : "") +
+        ") — root-Window, poll-based");
 }

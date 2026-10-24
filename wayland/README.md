@@ -120,16 +120,21 @@ the journal with no logging config and no KWin restart. Keep it that way.
 
 ```json
 { "grid": { "rows": 4, "cols": 6, "gap": 8, "margin": 4 },
+  "monitors": { "DP-1": { "rows": 2, "cols": 3, "gap": 8, "margin": 4 } },
   "hotkey": { "ctrl": true, "shift": false, "alt": false, "meta": true } }
 ```
 
-These are the defaults. `gap` is the space between zones, `margin` the space
-between the grid and the screen edge (both in pixels).
+Apart from the `monitors` entry, these are the defaults. `gap` is the space
+between zones, `margin` the space between the grid and the screen edge (both
+in pixels).
 
-- **grid** → the QML can't read JSON, so `gen-config.py` translates it into
-  `config.js`, which `main.qml` imports. The editor's "Save & Apply"
-  (`gridlet-apply.sh`) regenerates it and hot-reloads the script from a fresh
-  path.
+- **grid** → the default grid, used on every monitor without its own. The QML
+  can't read JSON, so `gen-config.py` translates the file into `config.js`,
+  which `main.qml` imports. The editor's "Save & Apply" (`gridlet-apply.sh`)
+  regenerates it and hot-reloads the script from a fresh path.
+- **monitors** → a grid of its own for any monitor, by connector name (the
+  `name` that `kscreen-doctor -o` lists, e.g. `DP-1`). A key it leaves out
+  comes from `grid`. The overlay uses the grid of the monitor it appears on.
 - **hotkey** → the helper reads it at startup (restart the helper to change it).
 
 ---
@@ -198,4 +203,6 @@ between the grid and the screen edge (both in pixels).
 - **Multi-monitor** picks the screen under the cursor (`activeOutput()`).
   Verified on Fedora 44 / Plasma 6.7.3 with two monitors of different
   resolutions, both at scale 1 — snapping is correct on both. Mixed *scale
-  factors* remain untested.
+  factors* remain untested. A monitor's own grid is keyed by its connector
+  name, so it follows the port: plug the monitor in elsewhere and it gets the
+  default grid there.
