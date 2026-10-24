@@ -37,6 +37,7 @@ which meant edge spacing was always exactly half the spacing between zones. The
 defaults above reproduce what the old gap=4 looked like.)
 """
 
+import copy
 import json
 import os
 
@@ -69,7 +70,7 @@ def deep_merge(defaults, user):
     This is like Object.assign({}, defaults, user) in JavaScript,
     but it goes deep — nested objects are also merged, not replaced wholesale.
     """
-    result = dict(defaults)
+    result = copy.deepcopy(defaults)    # never hand out DEFAULTS' own dicts
     for key, value in user.items():
         if key in result and isinstance(result[key], dict) and isinstance(value, dict):
             # Both are dicts — recurse
@@ -97,7 +98,7 @@ def load_config():
     if not os.path.exists(CONFIG_FILE):
         save_config(DEFAULTS)
         print(f"  Created default config: {CONFIG_FILE}")
-        return dict(DEFAULTS)
+        return copy.deepcopy(DEFAULTS)
 
     # Load user's config file
     try:
@@ -112,12 +113,12 @@ def load_config():
     except json.JSONDecodeError as e:
         print(f"  ⚠ Config file has invalid JSON: {e}")
         print(f"  ⚠ Using default settings (fix {CONFIG_FILE} to customize)")
-        return dict(DEFAULTS)
+        return copy.deepcopy(DEFAULTS)
 
     except Exception as e:
         print(f"  ⚠ Could not read config file: {e}")
         print(f"  ⚠ Using default settings")
-        return dict(DEFAULTS)
+        return copy.deepcopy(DEFAULTS)
 
 
 def save_config(config):
