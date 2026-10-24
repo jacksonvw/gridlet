@@ -263,6 +263,10 @@ Window {
         if (!w || !pendingGeometry) return;
         var pg = pendingGeometry;
         try { w.setMaximize(false, false); } catch (e) {}
+        // Releasing at a screen edge can also make KWin quick-tile the window,
+        // which would leave it tied to that tile. Untile first: untiling puts
+        // back the window's old geometry, so it must come before ours.
+        try { if (w.tile) w.tile = null; } catch (e) {}
         try {
             w.frameGeometry = Qt.rect(pg.x, pg.y, pg.w, pg.h);
             console.warn("Gridlet: ✓ snapped '" + w.caption + "' to " +
