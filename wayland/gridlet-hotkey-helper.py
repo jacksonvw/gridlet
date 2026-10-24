@@ -104,12 +104,18 @@ def find_keyboard_devices():
 
 
 def invoke_shortcut(name):
-    """Fire a kglobalaccel action registered by the KWin script (fire-and-forget)."""
+    """
+    Fire a kglobalaccel action registered by the KWin script, and wait for it.
+
+    Each call runs in its own process, so without the wait a release could
+    reach kglobalaccel before the press it follows, and the script would then
+    think the hotkey was still held.
+    """
     try:
-        subprocess.Popen(
+        subprocess.run(
             [QDBUS, "org.kde.kglobalaccel", "/component/kwin",
              "org.kde.kglobalaccel.Component.invokeShortcut", name],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5,
         )
     except Exception as e:
         log("invoke failed:", e)
