@@ -15,6 +15,9 @@ import sys
 CONFIG_FILE = os.path.expanduser("~/.config/gridlet/config.json")
 # Same as config.py. gap = space between zones, margin = space at the screen edge.
 DEFAULTS = {"rows": 4, "cols": 6, "gap": 8, "margin": 4}
+# The smallest value each setting may take. A hand-edited zero or negative
+# would otherwise reach the engine, which divides by the row and column counts.
+MINIMUM = {"rows": 1, "cols": 1, "gap": 0, "margin": 0}
 
 
 def main():
@@ -23,10 +26,13 @@ def main():
     try:
         with open(CONFIG_FILE) as f:
             user = json.load(f).get("grid", {})
-        for k in grid:
-            grid[k] = int(user.get(k, grid[k]))
     except Exception:
-        pass  # missing/broken config → defaults
+        user = {}  # missing/broken config → defaults
+    for k in grid:
+        try:
+            grid[k] = max(MINIMUM[k], int(user.get(k, grid[k])))
+        except (TypeError, ValueError):
+            pass  # not a number → keep the default for this one
     with open(out, "w") as f:
         f.write(".pragma library\n")
         f.write("var rows = %d;\n" % grid["rows"])
