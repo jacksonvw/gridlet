@@ -23,7 +23,7 @@ versions share from [`../icons/`](../icons/).
 | **KWin script** (`kwin-script/`, QML) | The overlay + snapping engine. Installed to `~/.local/share/kwin/scripts/gridlet` and enabled, so KWin auto-loads it every login. Polls `Workspace.activeWindow.move` + `cursorPos` (mirroring the X11 loop), draws the grid, snaps via `window.frameGeometry`. |
 | **Keyboard helper** (`gridlet-hotkey-helper.py`) | Pure Python stdlib. Reads `/dev/input/event*` to detect the Ctrl+Meta combo, then calls `kglobalaccel invokeShortcut GridletActivate/GridletDeactivate` — the script registers those two no-key shortcuts as the bridge. |
 | **Tray** (`gridlet-tray.py`) | A StatusNotifierItem (dbus-python) — the only tray type KDE Wayland honours. Enable/disable (kill-switch), launch the editor, quit. |
-| **Editor** (`editor.py`, tkinter) | The X11 grid editor, reused. "Save & Apply" runs `gridlet-apply.sh` to reload live. |
+| **Editor** (`editor.py`, tkinter) | Pick a monitor, then edit the shared default grid or give that monitor its own. "Save & Apply" runs `gridlet-apply.sh` to reload live. |
 
 ```
 keyboard ─/dev/input→ helper ─invokeShortcut→ KWin script ─frameGeometry→ window
@@ -94,7 +94,8 @@ unregisters the `GridletActivate`/`GridletDeactivate` shortcuts.
 - **Gridlet** tray icon → enable / disable / quit. Reachable even if the overlay
   ever misbehaves, since the panel sits above everything.
 - **Gridlet** / **Gridlet Grid Editor** in the app menu (Gridlet = re-start after
-  a Quit; Editor = change rows/cols/gap/margin, applied live on Save).
+  a Quit; Editor = pick a monitor and set its grid's rows/cols/gap/margin,
+  applied live on Save).
 
 ## Develop / debug
 
@@ -179,7 +180,7 @@ in pixels).
 | `gridlet-start.sh` | Idempotent (re)start of script + helper + tray |
 | `install.sh` / `uninstall.sh` | Install/enable/autostart, or remove |
 | `gridlet-dev-run.sh` | Dev runner with live logs |
-| `editor.py`, `config.py` | The X11 editor + config, reused (self-contained copies) |
+| `editor.py`, `config.py` | Grid editor (per monitor) + config, grown from the X11 versions |
 | `../icons/hicolor/` | App icon: the source SVG and its PNG sizes (`../icons/render-pngs.sh` re-renders them) |
 
 ---

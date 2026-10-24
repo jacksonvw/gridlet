@@ -17,7 +17,7 @@ the held modifier from the kernel input device.
 - Hold Ctrl+Meta while dragging any window to bring up the grid; paint a zone across cells; release to snap
 - Release Ctrl+Meta first to cancel, with a short grace period for a slightly late mouse release
 - Snaps within the work area, so panels stay clear; with several monitors it uses the one under the cursor
-- A Grid Editor for rows, columns, gap and margin, applied live
+- A Grid Editor for rows, columns, gap and margin, with a grid of its own for any monitor, applied live
 - A tray icon to enable, disable or quit, reachable even if the overlay misbehaves
 - Installs per user, starts on login, and uninstalls cleanly
 
@@ -37,7 +37,7 @@ KWin's Scale effect animates the overlay unless you turn it off (see
 | KWin script ([`wayland/kwin-script/`](wayland/kwin-script/)) | The overlay and snapping engine, running inside KWin | QML and JavaScript, KWin 6 scripting |
 | Keyboard helper | Watches the keyboard for Ctrl+Meta and tells the script through kglobalaccel | Python standard library |
 | Tray | Enable, disable, quit | dbus-python (StatusNotifierItem) |
-| Grid Editor | Rows, columns, gap and margin | Python, tkinter |
+| Grid Editor | Rows, columns, gap and margin, per monitor | Python, tkinter |
 | [`x11/`](x11/) | The original X11 app | Python, python-xlib, pycairo, pystray, Pillow |
 
 The Wayland pieces need KDE Plasma 6 in a Wayland session and Python 3 with
