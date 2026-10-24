@@ -108,8 +108,9 @@ Categories=Utility;Settings;
 EOF
 
 echo "→ Starting the helper + tray now"
-pkill -f "[g]ridlet-hotkey-helper" 2>/dev/null || true
-pkill -f "[g]ridlet-tray"          2>/dev/null || true
+# Anchored on the interpreter, so an editor with these files open survives.
+pkill -f '^[^ ]*python3 [^ ]*gridlet-hotkey-helper[.]py' 2>/dev/null || true
+pkill -f '^[^ ]*python3 [^ ]*gridlet-tray[.]py'          2>/dev/null || true
 sleep 0.3
 setsid python3 "$LIB_DST/gridlet-hotkey-helper.py" >/dev/null 2>&1 </dev/null &
 setsid python3 "$LIB_DST/gridlet-tray.py"          >/dev/null 2>&1 </dev/null &

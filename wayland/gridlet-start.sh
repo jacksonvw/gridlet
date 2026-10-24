@@ -11,7 +11,7 @@ if [ "$("$LIB/gridlet-qdbus" org.kde.KWin /Scripting org.kde.kwin.Scripting.isSc
 fi
 
 # Make sure the helper + tray are running (don't double-start).
-pgrep -f 'gridlet-hotkey-helper[.]py' >/dev/null 2>&1 || setsid python3 "$LIB/gridlet-hotkey-helper.py" >/dev/null 2>&1 </dev/null &
-pgrep -f 'gridlet-tray[.]py'          >/dev/null 2>&1 || setsid python3 "$LIB/gridlet-tray.py"          >/dev/null 2>&1 </dev/null &
+pgrep -f '^[^ ]*python3 [^ ]*gridlet-hotkey-helper[.]py' >/dev/null 2>&1 || setsid python3 "$LIB/gridlet-hotkey-helper.py" >/dev/null 2>&1 </dev/null &
+pgrep -f '^[^ ]*python3 [^ ]*gridlet-tray[.]py'          >/dev/null 2>&1 || setsid python3 "$LIB/gridlet-tray.py"          >/dev/null 2>&1 </dev/null &
 
 echo "Gridlet started."

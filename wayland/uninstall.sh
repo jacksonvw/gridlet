@@ -10,8 +10,9 @@ kwriteconfig6 --file kwinrc --group Plugins --key gridletEnabled false
 "$QDBUS" org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
 
 echo "→ Stopping the helper + tray"
-pkill -f "[g]ridlet-hotkey-helper" 2>/dev/null || true
-pkill -f "[g]ridlet-tray"          2>/dev/null || true
+# Anchored on the interpreter, so an editor with these files open survives.
+pkill -f '^[^ ]*python3 [^ ]*gridlet-hotkey-helper[.]py' 2>/dev/null || true
+pkill -f '^[^ ]*python3 [^ ]*gridlet-tray[.]py'          2>/dev/null || true
 
 echo "→ Unregistering global shortcuts"
 for s in GridletActivate GridletDeactivate; do

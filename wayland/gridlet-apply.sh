@@ -21,9 +21,9 @@ sleep 0.3
 "$LIB/gridlet-qdbus" org.kde.KWin /Scripting org.kde.kwin.Scripting.loadDeclarativeScript "$D/main.qml" gridlet >/dev/null 2>&1
 "$LIB/gridlet-qdbus" org.kde.KWin /Scripting org.kde.kwin.Scripting.start >/dev/null 2>&1
 
-# 3. Restart the helper (safe pkill: this script's process cmdline is just its
-#    own path, so it never matches the helper pattern).
-pkill -f 'gridlet-hotkey-helper[.]py' 2>/dev/null || true
+# 3. Restart the helper. The pattern is anchored on the interpreter, so it
+#    matches the helper itself, not an editor or a shell that mentions it.
+pkill -f '^[^ ]*python3 [^ ]*gridlet-hotkey-helper[.]py' 2>/dev/null || true
 sleep 0.3
 setsid python3 "$LIB/gridlet-hotkey-helper.py" >/dev/null 2>&1 </dev/null &
 

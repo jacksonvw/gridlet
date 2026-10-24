@@ -58,8 +58,13 @@ def is_script_loaded():
         return False
 
 
+# Matches the helper process only (python3 running the script), not an
+# editor or a shell that happens to mention the file.
+HELPER_PATTERN = r"^[^ ]*python3 [^ ]*gridlet-hotkey-helper[.]py"
+
+
 def helper_running():
-    return subprocess.run(["pgrep", "-f", "gridlet-hotkey-helper[.]py"],
+    return subprocess.run(["pgrep", "-f", HELPER_PATTERN],
                           stdout=subprocess.DEVNULL).returncode == 0
 
 
@@ -75,7 +80,7 @@ def do_disable():
     _kwin("unloadScript", "gridlet")
     subprocess.run(["kwriteconfig6", "--file", "kwinrc", "--group", "Plugins",
                     "--key", "gridletEnabled", "false"])
-    subprocess.run(["pkill", "-f", "gridlet-hotkey-helper[.]py"],
+    subprocess.run(["pkill", "-f", HELPER_PATTERN],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
