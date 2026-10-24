@@ -63,11 +63,6 @@ def is_script_loaded():
 HELPER_PATTERN = r"^[^ ]*python3 [^ ]*gridlet-hotkey-helper[.]py"
 
 
-def helper_running():
-    return subprocess.run(["pgrep", "-f", HELPER_PATTERN],
-                          stdout=subprocess.DEVNULL).returncode == 0
-
-
 def do_enable():
     subprocess.run(["kwriteconfig6", "--file", "kwinrc", "--group", "Plugins",
                     "--key", "gridletEnabled", "true"])
@@ -256,7 +251,9 @@ class StatusNotifierItem(dbus.service.Object):
 class TrayApp:
     def __init__(self):
         self.bus = dbus.SessionBus()
-        self.enabled = is_script_loaded() or helper_running()
+        # The KWin script does the snapping, so it alone decides on/off. The
+        # helper autostarts even when the script is disabled, so it says nothing.
+        self.enabled = is_script_loaded()
         self.bus_name = dbus.service.BusName(
             "org.kde.StatusNotifierItem-%d-1" % os.getpid(), self.bus)
         self.menu = DbusMenu(self.bus, "/MenuBar", self)
