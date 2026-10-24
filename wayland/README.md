@@ -136,6 +136,20 @@ in pixels).
 - **monitors** → a grid of its own for any monitor, by connector name (the
   `name` that `kscreen-doctor -o` lists, e.g. `DP-1`). A key it leaves out
   comes from `grid`. The overlay uses the grid of the monitor it appears on.
+- A grid laid out in the editor also has `col_sizes` and `row_sizes` (relative
+  widths and heights, written in ten-thousandths) and `zones`, which maps each
+  cell, row by row, to the zone it belongs to, so neighbouring cells with the
+  same number form one zone. For example, a tall zone on the left beside four
+  smaller ones:
+
+  ```json
+  { "cols": 3, "rows": 2, "col_sizes": [2500, 5000, 2500], "row_sizes": [5000, 5000],
+    "zones": [[0, 1, 2], [0, 3, 4]], "gap": 8, "margin": 4 }
+  ```
+
+  Every zone must be a filled rectangle of cells; `gen-config.py` drops a map
+  that isn't, falling back to one zone per cell. Painting across zones in the
+  overlay always takes merged zones whole.
 - **hotkey** → the helper reads it at startup (restart the helper to change it).
 
 ---
@@ -175,6 +189,7 @@ in pixels).
 | `70-gridlet-input.rules` | udev rule granting keyboard read access (non-SteamOS) |
 | `gridlet-tray.py` | StatusNotifierItem tray control |
 | `gen-config.py` | config.json → config.js |
+| `layout.py` | Zone layouts: split, merge and move dividers, and their config form |
 | `gridlet-apply.sh` | Regenerate config.js + hot-reload + restart helper (live apply) |
 | `gridlet-edit.sh` | Launch editor, then apply on save |
 | `gridlet-start.sh` | Idempotent (re)start of script + helper + tray |

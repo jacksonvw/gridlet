@@ -9,12 +9,16 @@ into a tiny .js the script imports. Run by install.sh and gridlet-dev-run.sh.
 It holds the default grid and, by connector name, each monitor's own grid:
     var grid = {"rows": 4, "cols": 6, "gap": 8, "margin": 4};
     var monitors = {"DP-1": {"rows": 2, "cols": 3, "gap": 8, "margin": 4}};
+A grid laid out in the editor also carries "col_sizes", "row_sizes" and a
+"zones" map (see layout.py).
 
 Usage: gen-config.py <output-path>
 """
 import json
 import os
 import sys
+
+from layout import Layout
 
 CONFIG_FILE = os.path.expanduser("~/.config/gridlet/config.json")
 # Same as config.py. gap = space between zones, margin = space at the screen edge.
@@ -24,20 +28,36 @@ DEFAULTS = {"rows": 4, "cols": 6, "gap": 8, "margin": 4}
 MINIMUM = {"rows": 1, "cols": 1, "gap": 0, "margin": 0}
 
 
+# The keys that describe a grid's zones, as opposed to its spacing.
+LAYOUT_KEYS = ("cols", "rows", "col_sizes", "row_sizes", "zones")
+
+
 def clean(grid, fallback):
-    """One grid's settings as whole numbers within range. Anything missing or
-    not a number keeps its value from `fallback`."""
-    out = dict(fallback)
-    for k in out:
+    """One grid's settings as whole numbers within range, plus its zones.
+    Anything missing or not a number keeps its value from `fallback`, and a
+    grid that says nothing about its zones takes fallback's zones too."""
+    if not isinstance(grid, dict):
+        grid = {}
+    out = {}
+    for k in DEFAULTS:
         try:
-            out[k] = max(MINIMUM[k], int(grid.get(k, out[k])))
-        except (AttributeError, TypeError, ValueError):
-            pass  # not a number (or not a grid at all) → keep the fallback
+            out[k] = max(MINIMUM[k], int(grid.get(k, fallback[k])))
+        except (TypeError, ValueError):
+            out[k] = fallback[k]  # not a number → keep the fallback
+    src = grid if any(k in grid for k in LAYOUT_KEYS) else fallback
+    # Sizes or a zone map that don't fit the grid are dropped by Layout, and
+    # an even grid of single-cell zones comes back as just cols and rows.
+    out.update(Layout.from_grid({"cols": out["cols"], "rows": out["rows"],
+                                 "col_sizes": src.get("col_sizes"),
+                                 "row_sizes": src.get("row_sizes"),
+                                 "zones": src.get("zones")}).to_grid())
     return out
 
 
 def summary(grid):
-    return "%(cols)dx%(rows)d gap=%(gap)d margin=%(margin)d" % grid
+    zones = len({z for row in grid["zones"] for z in row}) if "zones" in grid else None
+    return ("%(cols)dx%(rows)d" % grid + (" (%d zones)" % zones if zones else "") +
+            " gap=%(gap)d margin=%(margin)d" % grid)
 
 
 def main():

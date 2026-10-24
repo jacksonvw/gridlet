@@ -16,14 +16,18 @@ import "config.js" as GCfg    // grid settings, generated from config.json
  * state — activeWindow.move for the drag, cursorPos for position — and the
  * modifier arrives from the helper via GridletActivate / GridletDeactivate.
  *
- * Order of operations (identical to overlay.py):
+ * Order of operations (as in overlay.py):
  *   - Overlay shows only while BOTH dragging a window AND holding the hotkey.
- *   - start cell = cell under cursor when the overlay first appears.
- *   - Zone = rectangle spanning start cell → current cell (multi-cell paint).
- *   - Look: 30% dim, each zone inset by gap; non-selected = white outline,
+ *   - start zone = zone under cursor when the overlay first appears.
+ *   - Selection = rectangle spanning start zone → current zone (multi-zone
+ *     paint), grown so that zones merged in the editor are taken whole.
+ *   - Look: 30% dim, zones separated by gap; non-selected = white outline,
  *     selected = filled white.
  *   - Release hotkey first = cancel, but a 330ms grace still allows the
  *     mouse-release snap.
+ *
+ * Unlike the X11 original, the grid can differ per monitor, and its columns,
+ * rows and zones can be laid out freely in the Grid Editor.
  */
 Window {
     id: overlay
@@ -71,13 +75,15 @@ Window {
 
     // ---- session geometry (locked when the overlay appears) ----
     property rect workArea: Qt.rect(0, 0, 0, 0)
-    // Cell edges inside the work area: column c spans colStart[c]..colEnd[c].
-    // Replaced as one object, so the cells never see a half-updated layout.
-    property var layout: ({ "colStart": [], "colEnd": [], "rowStart": [], "rowEnd": [] })
-    property int startCol: -1
-    property int startRow: -1
+    // Cell edges inside the work area (column c spans colStart[c]..colEnd[c]),
+    // the zones as cell spans {c0, r0, c1, r1}, and the zone of every cell
+    // (zoneAt[row][col]). A zone is one cell, or several merged in the editor.
+    // Replaced as one object, so the zones never see a half-updated layout.
+    property var layout: ({ "colStart": [], "colEnd": [], "rowStart": [], "rowEnd": [],
+                            "zones": [], "zoneAt": [] })
+    property int startZone: -1
 
-    // ---- selection bounds for highlighting ----
+    // ---- selection bounds for highlighting (a rectangle of cells) ----
     property int selMinCol: -1
     property int selMaxCol: -1
     property int selMinRow: -1
@@ -111,19 +117,19 @@ Window {
             height: overlay.workArea.height
 
             Repeater {
-                model: overlay.layout.colStart.length * overlay.layout.rowStart.length
+                model: overlay.layout.zones.length
                 Rectangle {
-                    property int c: index % overlay.layout.colStart.length
-                    property int r: Math.floor(index / overlay.layout.colStart.length)
+                    // A zone can briefly be missing while the Repeater rebuilds
+                    // for a layout with fewer zones; it then draws as nothing.
+                    property var span: overlay.layout.zones[index] || ({ "c0": 0, "r0": 0, "c1": -1, "r1": -1 })
                     property bool sel: overlay.selMinCol >= 0 &&
-                                       c >= overlay.selMinCol && c <= overlay.selMaxCol &&
-                                       r >= overlay.selMinRow && r <= overlay.selMaxRow
-                    // "|| 0": a cell can briefly be out of range while the
-                    // Repeater rebuilds for a grid of a different size.
-                    x: overlay.layout.colStart[c] || 0
-                    y: overlay.layout.rowStart[r] || 0
-                    width: (overlay.layout.colEnd[c] - overlay.layout.colStart[c]) || 0
-                    height: (overlay.layout.rowEnd[r] - overlay.layout.rowStart[r]) || 0
+                                       span.c0 >= overlay.selMinCol && span.c1 <= overlay.selMaxCol &&
+                                       span.r0 >= overlay.selMinRow && span.r1 <= overlay.selMaxRow
+                    // A zone of several cells absorbs the gaps between them.
+                    x: overlay.layout.colStart[span.c0] || 0
+                    y: overlay.layout.rowStart[span.r0] || 0
+                    width: (overlay.layout.colEnd[span.c1] - overlay.layout.colStart[span.c0]) || 0
+                    height: (overlay.layout.rowEnd[span.r1] - overlay.layout.rowStart[span.r0]) || 0
                     // Matches the X11 original: 30% white lines / 30% white fill.
                     color: sel ? "#4DFFFFFF" : "transparent"
                     border.color: "#4DFFFFFF"
@@ -200,6 +206,49 @@ Window {
         return w;
     }
 
+    // The zones of a grid as cell spans, and the zone of every cell. Without
+    // a zone map (from the editor), every cell is a zone of its own.
+    // gen-config.py has checked that each zone is a filled rectangle of cells.
+    function zonesOf(grid) {
+        var zones = [], zoneAt = [], byIndex = {};
+        for (var r = 0; r < grid.rows; r++) {
+            zoneAt.push([]);
+            for (var c = 0; c < grid.cols; c++) {
+                var key = grid.zones ? grid.zones[r][c] : r * grid.cols + c;
+                var z = byIndex[key];
+                if (z === undefined) {
+                    z = byIndex[key] = zones.length;
+                    zones.push({ "c0": c, "r0": r, "c1": c, "r1": r });
+                }
+                var s = zones[z];
+                s.c0 = Math.min(s.c0, c); s.c1 = Math.max(s.c1, c);
+                s.r0 = Math.min(s.r0, r); s.r1 = Math.max(s.r1, r);
+                zoneAt[r].push(z);
+            }
+        }
+        return { "zones": zones, "zoneAt": zoneAt };
+    }
+
+    // Grow a rectangle of cells until it cuts through no zone, so a zone of
+    // several cells is always taken whole (FancyZones' merge closure).
+    function closure(c0, r0, c1, r1) {
+        var zs = layout.zones, grown = true;
+        while (grown) {
+            grown = false;
+            for (var i = 0; i < zs.length; i++) {
+                var z = zs[i];
+                var overlaps = z.c0 <= c1 && z.c1 >= c0 && z.r0 <= r1 && z.r1 >= r0;
+                var inside = z.c0 >= c0 && z.c1 <= c1 && z.r0 >= r0 && z.r1 <= r1;
+                if (overlaps && !inside) {
+                    c0 = Math.min(c0, z.c0); c1 = Math.max(c1, z.c1);
+                    r0 = Math.min(r0, z.r0); r1 = Math.max(r1, z.r1);
+                    grown = true;
+                }
+            }
+        }
+        return { "c0": c0, "r0": r0, "c1": c1, "r1": r1 };
+    }
+
     // Which cell along an axis holds `pos`: each cell owns the gap after it,
     // and the margins clamp to the first and last cells.
     function indexAt(pos, starts) {
@@ -244,13 +293,15 @@ Window {
         rows = grid.rows; cols = grid.cols;
         gap = grid.gap; margin = grid.margin;
         // Cells share out what's left after the outer margins and the inter-cell
-        // gaps are taken off.
-        var cx = axis(workArea.width, equalWeights(cols));
-        var cy = axis(workArea.height, equalWeights(rows));
+        // gaps are taken off, by the column and row sizes set in the editor.
+        var cx = axis(workArea.width, grid.col_sizes || equalWeights(cols));
+        var cy = axis(workArea.height, grid.row_sizes || equalWeights(rows));
+        var zs = zonesOf(grid);
         layout = { "colStart": cx.starts, "colEnd": cx.ends,
-                   "rowStart": cy.starts, "rowEnd": cy.ends };
+                   "rowStart": cy.starts, "rowEnd": cy.ends,
+                   "zones": zs.zones, "zoneAt": zs.zoneAt };
 
-        startCol = -1; startRow = -1;
+        startZone = -1;
         selMinCol = -1;
         pendingGeometry = null;
         snapSessionActive = true;
@@ -268,7 +319,8 @@ Window {
               "  screen=" + g.width + "x" + g.height +
               "  work=" + workArea.width + "x" + workArea.height + "  cell=" +
               (cx.ends[0] - cx.starts[0]) + "x" + (cy.ends[0] - cy.starts[0]) +
-              "  grid=" + cols + "x" + rows + "  gap=" + gap + " margin=" + margin);
+              "  grid=" + cols + "x" + rows + "  zones=" + zs.zones.length +
+              "  gap=" + gap + " margin=" + margin);
     }
 
     function hideOverlay() {
@@ -284,12 +336,16 @@ Window {
         var cp = ws.cursorPos;
         var cell = cellAt(cp.x, cp.y);
         if (!cell) return;
-        if (startCol < 0) { startCol = cell.col; startRow = cell.row; }
-        selMinCol = Math.min(startCol, cell.col);
-        selMaxCol = Math.max(startCol, cell.col);
-        selMinRow = Math.min(startRow, cell.row);
-        selMaxRow = Math.max(startRow, cell.row);
-        pendingGeometry = computeZone(startCol, startRow, cell.col, cell.row);
+        // The zone painted from is the one under the cursor when the overlay
+        // appeared; the selection runs from it to the zone under the cursor now.
+        var here = layout.zoneAt[cell.row][cell.col];
+        if (startZone < 0) startZone = here;
+        var a = layout.zones[startZone], b = layout.zones[here];
+        var s = closure(Math.min(a.c0, b.c0), Math.min(a.r0, b.r0),
+                        Math.max(a.c1, b.c1), Math.max(a.r1, b.r1));
+        selMinCol = s.c0; selMaxCol = s.c1;
+        selMinRow = s.r0; selMaxRow = s.r1;
+        pendingGeometry = computeZone(s.c0, s.r0, s.c1, s.r1);
     }
 
     // Overlay visible iff (hotkey held) AND (dragging a window).
