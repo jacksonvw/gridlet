@@ -17,6 +17,10 @@ D="$(mktemp -d /tmp/gridlet-apply.XXXXXX)"
 cp "$KWIN_DST/contents/ui/main.qml"  "$D/main.qml"
 cp "$KWIN_DST/contents/ui/config.js" "$D/config.js"
 "$LIB/gridlet-qdbus" org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript gridlet >/dev/null 2>&1
+# The script just unloaded ran from an earlier copy, which isn't needed now.
+for old in /tmp/gridlet-apply.*; do
+    [ "$old" != "$D" ] && rm -rf "$old" 2>/dev/null
+done
 sleep 0.3
 "$LIB/gridlet-qdbus" org.kde.KWin /Scripting org.kde.kwin.Scripting.loadDeclarativeScript "$D/main.qml" gridlet >/dev/null 2>&1
 "$LIB/gridlet-qdbus" org.kde.KWin /Scripting org.kde.kwin.Scripting.start >/dev/null 2>&1
