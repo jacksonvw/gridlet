@@ -23,7 +23,7 @@ versions share from [`../icons/`](../icons/).
 | **KWin script** (`kwin-script/`, QML) | The overlay + snapping engine. Installed to `~/.local/share/kwin/scripts/gridlet` and enabled, so KWin auto-loads it every login. Polls `Workspace.activeWindow.move` + `cursorPos` (mirroring the X11 loop), draws the grid, snaps via `window.frameGeometry`. |
 | **Keyboard helper** (`gridlet-hotkey-helper.py`) | Pure Python stdlib. Reads `/dev/input/event*` to detect the Ctrl+Meta combo, then calls `kglobalaccel invokeShortcut GridletActivate/GridletDeactivate` — the script registers those two no-key shortcuts as the bridge. |
 | **Tray** (`gridlet-tray.py`) | A StatusNotifierItem (dbus-python) — the only tray type KDE Wayland honours. Enable/disable (kill-switch), launch the editor, quit. |
-| **Editor** (`editor.py`, tkinter) | Pick a monitor, then edit the shared default grid or give that monitor its own. "Save & Apply" runs `gridlet-apply.sh` to reload live. |
+| **Editor** (`editor.py`, tkinter) | Pick a monitor, then lay out its zones the way the FancyZones grid editor does: split, merge, drag dividers, each zone labelled with its size in pixels. A monitor can share the default grid or have its own. "Save & Apply" runs `gridlet-apply.sh` to reload live. |
 
 ```
 keyboard ─/dev/input→ helper ─invokeShortcut→ KWin script ─frameGeometry→ window
@@ -68,7 +68,8 @@ Plasma 6.7.3.
    package on Fedora. It is often pulled in as a weak dependency, but nothing
    requires it, so `sudo dnf install python3-tkinter` makes sure. Snapping and
    the tray don't need it (their `python3-dbus` / `python3-gobject` are core
-   Fedora deps).
+   Fedora deps). The editor also uses those two, when present, to ask KWin for
+   each monitor's work area, so the sizes it shows leave out the panels.
 
 Nothing else is needed — in particular the engine's diagnostics require no
 logging config, see below.
@@ -94,8 +95,11 @@ unregisters the `GridletActivate`/`GridletDeactivate` shortcuts.
 - **Gridlet** tray icon → enable / disable / quit. Reachable even if the overlay
   ever misbehaves, since the panel sits above everything.
 - **Gridlet** / **Gridlet Grid Editor** in the app menu (Gridlet = re-start after
-  a Quit; Editor = pick a monitor and set its grid's rows/cols/gap/margin,
-  applied live on Save).
+  a Quit; Editor = pick a monitor and lay out its zones, applied live on Save).
+  In the editor, click a zone to split it (Shift splits it the other way),
+  drag a divider's handle to move it, drag across zones and press Merge to
+  join them, and right-click a handle to remove its divider. Columns and rows
+  start an even grid; gap and margin set the spacing.
 
 ## Develop / debug
 
@@ -195,7 +199,7 @@ in pixels).
 | `gridlet-start.sh` | Idempotent (re)start of script + helper + tray |
 | `install.sh` / `uninstall.sh` | Install/enable/autostart, or remove |
 | `gridlet-dev-run.sh` | Dev runner with live logs |
-| `editor.py`, `config.py` | Grid editor (per monitor) + config, grown from the X11 versions |
+| `editor.py`, `config.py` | Grid editor (zone designer, per monitor) + config, grown from the X11 versions |
 | `../icons/hicolor/` | App icon: the source SVG and its PNG sizes (`../icons/render-pngs.sh` re-renders them) |
 
 ---
